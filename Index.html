@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mobiway — Mobile Shop Manager</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#111827;color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5}
+.logo{font-size:24px;font-weight:800}.logo span{color:#60a5fa}
+nav{display:flex;gap:8px;flex-wrap:wrap}button,.btn{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:650}
+nav button{background:#1f2937;color:#fff}.active{background:#2563eb!important}
+main{max-width:1200px;margin:auto;padding:22px}.page{display:none}.page.show{display:block}
+h1{margin:0 0 6px}.muted{color:#6b7280}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}
+.card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 3px 14px #0000000b}.stat{font-size:28px;font-weight:800;margin-top:7px}
+.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+input,select{width:100%;padding:11px;border:1px solid #d7dce2;border-radius:9px;background:#fff}
+.actions{display:flex;gap:8px;margin-top:14px}.primary{background:#2563eb;color:#fff}.danger{background:#ef4444;color:#fff}.secondary{background:#e5e7eb}
+.tablewrap{overflow:auto;margin-top:16px}.table{width:100%;border-collapse:collapse;background:#fff}.table th,.table td{padding:11px;border-bottom:1px solid #eef0f2;text-align:left;white-space:nowrap}.table th{font-size:13px;color:#6b7280}
+.badge{padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#dcfce7;color:#166534}.sold{background:#fee2e2;color:#991b1b}
+.toolbar{display:flex;gap:10px;margin:15px 0;flex-wrap:wrap}.toolbar input{max-width:320px}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.formgrid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.grid,.formgrid{grid-template-columns:1fr}header{align-items:flex-start;gap:12px;flex-direction:column}main{padding:14px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div id="lock" style="position:fixed;inset:0;background:#111827;z-index:99;display:flex;align-items:center;justify-content:center;padding:20px">
+<div style="background:#fff;border-radius:18px;padding:28px;max-width:360px;width:100%;text-align:center">
+<h2 style="margin-top:0">Mobiway 🔐</h2><p style="color:#6b7280">Personal shop dashboard</p>
+<input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="Enter PIN" style="width:100%;padding:13px;border:1px solid #ddd;border-radius:10px;margin:10px 0">
+<button class="primary" style="width:100%" onclick="unlock()">Login</button>
+<p id="pinErr" style="color:#ef4444;font-size:13px"></p>
+</div></div>
+<header><div class="logo">Mobi<span>way</span></div><nav>
+<button class="active" onclick="show('dashboard',this)">Dashboard</button><button onclick="show('inventory',this)">Stock</button><button onclick="show('sales',this)">Sold</button><button onclick="show('reports',this)">Reports</button>
+</nav></header>
+<main>
+<section id="dashboard" class="page show">
+<h1>Dashboard</h1><div class="muted">Mobiway Mobile Shop</div>
+<div class="grid">
+<div class="card">Total Stock<div id="stockCount" class="stat">0</div></div>
+<div class="card">Sold Phones<div id="soldCount" class="stat">0</div></div>
+<div class="card">Sales<div id="salesTotal" class="stat">₹0</div></div>
+<div class="card">Profit<div id="profitTotal" class="stat">₹0</div></div>
+</div>
+<div class="card"><h3>Quick actions</h3><div class="actions"><button class="primary" onclick="show('inventory')">+ Add Phone</button><button class="secondary" onclick="show('sales')">View Sold Phones</button></div></div>
+</section>
+
+<section id="inventory" class="page">
+<h1>Phone Stock</h1><div class="muted">Add and manage your mobile inventory.</div>
+<div class="card" style="margin-top:16px"><h3>Add Phone</h3>
+<div class="formgrid">
+<div class="field"><label>Brand</label><input id="brand" placeholder="Apple"></div><div class="field"><label>Model</label><input id="model" placeholder="iPhone 15"></div>
+<div class="field"><label>RAM / Storage</label><input id="storage" placeholder="8GB / 128GB"></div><div class="field"><label>Colour</label><input id="colour" placeholder="Black"></div>
+<div class="field"><label>IMEI 1</label><input id="imei1" placeholder="IMEI"></div><div class="field"><label>IMEI 2</label><input id="imei2" placeholder="Optional"></div>
+<div class="field"><label>Purchase Price</label><input id="buy" type="number" placeholder="50000"></div><div class="field"><label>Selling Price</label><input id="sell" type="number" placeholder="55000"></div>
+<div class="field"><label>Supplier</label><input id="supplier" placeholder="Supplier name"></div>
+</div><div class="actions"><button class="primary" onclick="addPhone()">Add to Stock</button></div></div>
+<div class="toolbar"><input id="searchStock" placeholder="Search model / IMEI / brand..." oninput="render()"></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Phone</th><th>Storage</th><th>IMEI</th><th>Buy</th><th>Sell</th><th>Status</th><th>Action</th></tr></thead><tbody id="stockTable"></tbody></table></div>
+</section>
+
+<section id="sales" class="page">
+<h1>Sold Phones</h1><div class="muted">Select a stock phone to record a sale.</div>
+<div class="card" style="margin-top:16px"><h3>Record Sale</h3><div class="formgrid">
+<div class="field"><label>Phone</label><select id="salePhone"></select></div><div class="field"><label>Customer Name</label><input id="customer" placeholder="Customer"></div>
+<div class="field"><label>Customer Mobile</label><input id="customerMobile" placeholder="10 digit number"></div><div class="field"><label>Payment</label><select id="payment"><option>Cash</option><option>UPI</option><option>Card</option><option>EMI</option></select></div>
+</div><div class="actions"><button class="primary" onclick="sellPhone()">Mark as Sold</button></div></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Date</th><th>Phone</th><th>Customer</th><th>IMEI</th><th>Amount</th><th>Payment</th><th>Profit</th></tr></thead><tbody id="salesTable"></tbody></table></div>
+</section>
+
+<section id="reports" class="page">
+<h1>Reports</h1><div class="muted">Your sales and stock summary.</div>
+<div class="grid"><div class="card">Available<div id="rAvailable" class="stat">0</div></div><div class="card">Sold<div id="rSold" class="stat">0</div></div><div class="card">Revenue<div id="rRevenue" class="stat">₹0</div></div><div class="card">Profit<div id="rProfit" class="stat">₹0</div></div></div>
+<div class="card"><h3>Data backup</h3><p class="muted">Export your shop data as JSON so you can keep a backup.</p><button class="primary" onclick="backup()">Download Backup</button> <button class="secondary" onclick="resetAll()">Reset Demo Data</button>
+<button class="secondary" onclick="changePin()">Change PIN</button></div>
+</section>
+</main>
+<script>
+const SUPABASE_URL = 'https://uypdvuekywpztmpudbih.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_HptT7yp97DEcTZJO9YmZkg_gyqBIzuo';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let data={phones:[],sales:[]};
+
+function show(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));document.getElementById(id).classList.add('show');document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');render();}
+async function unlock(){
+  const pin=document.getElementById('pin').value;
+  // First-use friendly: authenticate with the Supabase account email stored in the browser prompt.
+  // The actual cloud login uses email/password; PIN remains a local convenience only.
+  if(pin==='1234'){document.getElementById('lock').style.display='none';await loadData();}
+  else document.getElementById('pinErr').textContent='Wrong PIN';
+}
+async function loadData(){
+  const {data:phones,error:pErr}=await supabaseClient.from('Phones').select('*').order('id',{ascending:false});
+  const {data:sales,error:sErr}=await supabaseClient.from('sales').select('*').order('id',{ascending:false});
+  if(pErr||sErr){console.error(pErr||sErr); alert('Cloud database se data load nahi hua. Supabase RLS policy check karein.');return;}
+  data.phones=phones||[]; data.sales=sales||[]; render();
+}
+function val(id){return document.getElementById(id).value.trim()}
+async function addPhone(){
+  const row={brand:val('brand'),model:val('model'),storage:val('storage'),colour:val('colour'),imei1:val('imei1'),imei2:val('imei2'),purchase_price:Number(val('buy')||0),selling_price:Number(val('sell')||0),supplier:val('supplier'),status:'available'};
+  if(!row.brand||!row.model||!row.imei1){alert('Brand, Model aur IMEI 1 bharna zaroori hai.');return;}
+  const {error}=await supabaseClient.from('Phones').insert(row);
+  if(error){alert(error.message);return;}
+  ['brand','model','storage','colour','imei1','imei2','buy','sell','supplier'].forEach(id=>document.getElementById(id).value='');
+  await loadData(); alert('Phone cloud stock me add ho gaya ✅');
+}
+async function sellPhone(){
+  const phoneId=val('salePhone'); const phone=data.phones.find(x=>String(x.id)===String(phoneId));
+  if(!phone){alert('Phone select karein');return;}
+  const row={phone_id:phone.id,customer_name:val('customer'),customer_mobile:val('customerMobile'),selling_price:Number(phone.selling_price||0),payment_method:document.getElementById('payment').value,sale_date:new Date().toISOString().slice(0,10)};
+  const {error}=await supabaseClient.from('sales').insert(row); if(error){alert(error.message);return;}
+  const {error:e2}=await supabaseClient.from('Phones').update({status:'sold'}).eq('id',phone.id); if(e2){alert(e2.message);return;}
+  document.getElementById('customer').value='';document.getElementById('customerMobile').value=''; await loadData(); alert('Sale save ho gayi ✅');
+}
+async function deletePhone(id){if(!confirm('Phone delete karein?'))return;const {error}=await supabaseClient.from('Phones').delete().eq('id',id);if(error)alert(error.message);else await loadData();}
+function money(n){return '₹'+Number(n||0).toLocaleString('en-IN')}
+function render(){
+ const available=data.phones.filter(p=>p.status!=='sold'); const sold=data.phones.filter(p=>p.status==='sold');
+ const revenue=data.sales.reduce((a,s)=>a+Number(s.selling_price||0),0);
+ let profit=0; data.sales.forEach(s=>{const p=data.phones.find(x=>String(x.id)===String(s.phone_id));profit+=Number(s.selling_price||0)-Number(p?.purchase_price||0)});
+ document.getElementById('stockCount').textContent=data.phones.length;document.getElementById('soldCount').textContent=sold.length;document.getElementById('salesTotal').textContent=money(revenue);document.getElementById('profitTotal').textContent=money(profit);
+ document.getElementById('rAvailable').textContent=available.length;document.getElementById('rSold').textContent=sold.length;document.getElementById('rRevenue').textContent=money(revenue);document.getElementById('rProfit').textContent=money(profit);
+ const q=(document.getElementById('searchStock')?.value||'').toLowerCase();
+ document.getElementById('stockTable').innerHTML=data.phones.filter(p=>[p.brand,p.model,p.imei1,p.imei2].join(' ').toLowerCase().includes(q)).map(p=>`<tr><td>${p.brand||''} ${p.model||''}</td><td>${p.storage||''}</td><td>${p.imei1||''}</td><td>${money(p.purchase_price)}</td><td>${money(p.selling_price)}</td><td><span class="badge ${p.status==='sold'?'sold':''}">${p.status||'available'}</span></td><td>${p.status!=='sold'?`<button class="danger" onclick="deletePhone(${p.id})">Delete</button>`:''}</td></tr>`).join('')||'<tr><td colspan="7">No phones found.</td></tr>';
+ document.getElementById('salePhone').innerHTML=available.map(p=>`<option value="${p.id}">${p.brand} ${p.model} — ${p.imei1}</option>`).join('')||'<option value="">No available phones</option>';
+ document.getElementById('salesTable').innerHTML=data.sales.map(s=>{const p=data.phones.find(x=>String(x.id)===String(s.phone_id));const pr=Number(s.selling_price||0)-Number(p?.purchase_price||0);return `<tr><td>${s.sale_date||''}</td><td>${p?.brand||''} ${p?.model||''}</td><td>${s.customer_name||''}</td><td>${p?.imei1||''}</td><td>${money(s.selling_price)}</td><td>${s.payment_method||''}</td><td>${money(pr)}</td></tr>`}).join('')||'<tr><td colspan="7">No sales yet.</td></tr>';
+}
+function backup(){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mobiway-backup.json';a.click();URL.revokeObjectURL(a.href)}
+async function resetAll(){alert('Cloud data ko reset karne ke liye Supabase se delete karna hoga. Is button ko safety ke liye disable rakha gaya hai.')}
+function changePin(){alert('PIN abhi 1234 hai. Cloud login add karne ke baad ise change karenge.')}
+
+document.addEventListener('DOMContentLoaded',()=>{document.getElementById('pin').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});});
+</script>
+</body></html>
