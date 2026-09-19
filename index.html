@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mobiway — Mobile Shop Manager</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#111827;color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5}
+.logo{font-size:24px;font-weight:800}.logo span{color:#60a5fa}
+nav{display:flex;gap:8px;flex-wrap:wrap}button,.btn{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:650}
+nav button{background:#1f2937;color:#fff}.active{background:#2563eb!important}
+main{max-width:1200px;margin:auto;padding:22px}.page{display:none}.page.show{display:block}
+h1{margin:0 0 6px}.muted{color:#6b7280}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}
+.card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 3px 14px #0000000b}.stat{font-size:28px;font-weight:800;margin-top:7px}
+.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+input,select{width:100%;padding:11px;border:1px solid #d7dce2;border-radius:9px;background:#fff}
+.actions{display:flex;gap:8px;margin-top:14px}.primary{background:#2563eb;color:#fff}.danger{background:#ef4444;color:#fff}.secondary{background:#e5e7eb}
+.tablewrap{overflow:auto;margin-top:16px}.table{width:100%;border-collapse:collapse;background:#fff}.table th,.table td{padding:11px;border-bottom:1px solid #eef0f2;text-align:left;white-space:nowrap}.table th{font-size:13px;color:#6b7280}
+.badge{padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#dcfce7;color:#166534}.sold{background:#fee2e2;color:#991b1b}
+.toolbar{display:flex;gap:10px;margin:15px 0;flex-wrap:wrap}.toolbar input{max-width:320px}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.formgrid{grid-template-columns:1fr 1fr}}@media(max-width:520px){.grid,.formgrid{grid-template-columns:1fr}header{align-items:flex-start;gap:12px;flex-direction:column}main{padding:14px}}
+</style>
+</head>
+<body>
+<div id="lock" style="position:fixed;inset:0;background:#111827;z-index:99;display:flex;align-items:center;justify-content:center;padding:20px">
+<div style="background:#fff;border-radius:18px;padding:28px;max-width:360px;width:100%;text-align:center">
+<h2 style="margin-top:0">Mobiway 🔐</h2><p style="color:#6b7280">Personal shop dashboard</p>
+<input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="Enter PIN" style="width:100%;padding:13px;border:1px solid #ddd;border-radius:10px;margin:10px 0">
+<button class="primary" style="width:100%" onclick="unlock()">Login</button>
+<p id="pinErr" style="color:#ef4444;font-size:13px"></p>
+</div></div>
+<header><div class="logo">Mobi<span>way</span></div><nav>
+<button class="active" onclick="show('dashboard',this)">Dashboard</button><button onclick="show('inventory',this)">Stock</button><button onclick="show('sales',this)">Sold</button><button onclick="show('reports',this)">Reports</button>
+</nav></header>
+<main>
+<section id="dashboard" class="page show">
+<h1>Dashboard</h1><div class="muted">Mobiway Mobile Shop</div>
+<div class="grid">
+<div class="card">Total Stock<div id="stockCount" class="stat">0</div></div>
+<div class="card">Sold Phones<div id="soldCount" class="stat">0</div></div>
+<div class="card">Sales<div id="salesTotal" class="stat">₹0</div></div>
+<div class="card">Profit<div id="profitTotal" class="stat">₹0</div></div>
+</div>
+<div class="card"><h3>Quick actions</h3><div class="actions"><button class="primary" onclick="show('inventory')">+ Add Phone</button><button class="secondary" onclick="show('sales')">View Sold Phones</button></div></div>
+</section>
+
+<section id="inventory" class="page">
+<h1>Phone Stock</h1><div class="muted">Add and manage your mobile inventory.</div>
+<div class="card" style="margin-top:16px"><h3>Add Phone</h3>
+<div class="formgrid">
+<div class="field"><label>Brand</label><input id="brand" placeholder="Apple"></div><div class="field"><label>Model</label><input id="model" placeholder="iPhone 15"></div>
+<div class="field"><label>RAM / Storage</label><input id="storage" placeholder="8GB / 128GB"></div><div class="field"><label>Colour</label><input id="colour" placeholder="Black"></div>
+<div class="field"><label>IMEI 1</label><input id="imei1" placeholder="IMEI"></div><div class="field"><label>IMEI 2</label><input id="imei2" placeholder="Optional"></div>
+<div class="field"><label>Purchase Price</label><input id="buy" type="number" placeholder="50000"></div><div class="field"><label>Selling Price</label><input id="sell" type="number" placeholder="55000"></div>
+<div class="field"><label>Supplier</label><input id="supplier" placeholder="Supplier name"></div>
+</div><div class="actions"><button class="primary" onclick="addPhone()">Add to Stock</button></div></div>
+<div class="toolbar"><input id="searchStock" placeholder="Search model / IMEI / brand..." oninput="render()"></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Phone</th><th>Storage</th><th>IMEI</th><th>Buy</th><th>Sell</th><th>Status</th><th>Action</th></tr></thead><tbody id="stockTable"></tbody></table></div>
+</section>
+
+<section id="sales" class="page">
+<h1>Sold Phones</h1><div class="muted">Select a stock phone to record a sale.</div>
+<div class="card" style="margin-top:16px"><h3>Record Sale</h3><div class="formgrid">
+<div class="field"><label>Phone</label><select id="salePhone"></select></div><div class="field"><label>Customer Name</label><input id="customer" placeholder="Customer"></div>
+<div class="field"><label>Customer Mobile</label><input id="customerMobile" placeholder="10 digit number"></div><div class="field"><label>Payment</label><select id="payment"><option>Cash</option><option>UPI</option><option>Card</option><option>EMI</option></select></div>
+</div><div class="actions"><button class="primary" onclick="sellPhone()">Mark as Sold</button></div></div>
+<div class="tablewrap"><table class="table"><thead><tr><th>Date</th><th>Phone</th><th>Customer</th><th>IMEI</th><th>Amount</th><th>Payment</th><th>Profit</th></tr></thead><tbody id="salesTable"></tbody></table></div>
+</section>
+
+<section id="reports" class="page">
+<h1>Reports</h1><div class="muted">Your sales and stock summary.</div>
+<div class="grid"><div class="card">Available<div id="rAvailable" class="stat">0</div></div><div class="card">Sold<div id="rSold" class="stat">0</div></div><div class="card">Revenue<div id="rRevenue" class="stat">₹0</div></div><div class="card">Profit<div id="rProfit" class="stat">₹0</div></div></div>
+<div class="card"><h3>Data backup</h3><p class="muted">Export your shop data as JSON so you can keep a backup.</p><button class="primary" onclick="backup()">Download Backup</button> <button class="secondary" onclick="resetAll()">Reset Demo Data</button>
+<button class="secondary" onclick="changePin()">Change PIN</button></div>
+</section>
+</main>
+<script>
+const key='mobiway_v1';
+let data=JSON.parse(localStorage.getItem(key)||'{"phones":[],"sales":[]}');
+const money=n=>'₹'+Number(n||0).toLocaleString('en-IN');
+function save(){localStorage.setItem(key,JSON.stringify(data));render()}
+const PIN_KEY='mobiway_pin';
+if(!localStorage.getItem(PIN_KEY)) localStorage.setItem(PIN_KEY,'1234');
+function unlock(){if(document.getElementById('pin').value===localStorage.getItem(PIN_KEY)){document.getElementById('lock').style.display='none';sessionStorage.setItem('mobiway_unlocked','1')}else document.getElementById('pinErr').textContent='Wrong PIN';}
+if(sessionStorage.getItem('mobiway_unlocked')==='1') document.getElementById('lock').style.display='none';
+function show(id,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('show'));document.getElementById(id).classList.add('show');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');render()}
+function addPhone(){
+ const ids=['brand','model','storage','colour','imei1','imei2','buy','sell','supplier'],v=Object.fromEntries(ids.map(i=>[i,document.getElementById(i).value.trim()]));
+ if(!v.brand||!v.model||!v.imei1||!v.sell){alert('Brand, Model, IMEI 1 aur Selling Price bharna zaroori hai.');return}
+ if(data.phones.some(p=>p.imei1===v.imei1||p.imei2&&p.imei2===v.imei1)){alert('Ye IMEI already added hai.');return}
+ data.phones.push({id:Date.now(),...v,buy:+v.buy||0,sell:+v.sell||0,status:'Available'});
+ ids.forEach(i=>document.getElementById(i).value='');save();alert('Phone stock mein add ho gaya.');
+}
+function sellPhone(){
+ const id=+document.getElementById('salePhone').value,p=data.phones.find(x=>x.id===id);if(!p)return;
+ const customer=document.getElementById('customer').value.trim(); if(!customer){alert('Customer name bharna zaroori hai.');return}
+ data.sales.push({id:Date.now(),date:new Date().toLocaleString('en-IN'),phoneId:p.id,phone:p.brand+' '+p.model,imei:p.imei1,customer,customerMobile:document.getElementById('customerMobile').value,payment:document.getElementById('payment').value,amount:p.sell,profit:p.sell-p.buy});
+ p.status='Sold';save();document.getElementById('customer').value='';document.getElementById('customerMobile').value='';alert('Sale record ho gayi.');
+}
+function render(){
+ const avail=data.phones.filter(p=>p.status==='Available'), sold=data.phones.filter(p=>p.status==='Sold');
+ const revenue=data.sales.reduce((a,s)=>a+s.amount,0),profit=data.sales.reduce((a,s)=>a+s.profit,0);
+ stockCount.textContent=avail.length;soldCount.textContent=sold.length;salesTotal.textContent=money(revenue);profitTotal.textContent=money(profit);
+ rAvailable.textContent=avail.length;rSold.textContent=sold.length;rRevenue.textContent=money(revenue);rProfit.textContent=money(profit);
+ const q=(document.getElementById('searchStock')?.value||'').toLowerCase();
+ stockTable.innerHTML=data.phones.filter(p=>(p.brand+' '+p.model+' '+p.imei1+' '+p.imei2).toLowerCase().includes(q)).map(p=>`<tr><td><b>${p.brand} ${p.model}</b><br><small>${p.colour||''}</small></td><td>${p.storage||'-'}</td><td>${p.imei1}</td><td>${money(p.buy)}</td><td>${money(p.sell)}</td><td><span class="badge ${p.status==='Sold'?'sold':''}">${p.status}</span></td><td>${p.status==='Available'?`<button class="danger" onclick="deletePhone(${p.id})">Delete</button>`:'—'}</td></tr>`).join('')||'<tr><td colspan="7">No phones found.</td></tr>';
+ salePhone.innerHTML=avail.map(p=>`<option value="${p.id}">${p.brand} ${p.model} — ${p.imei1} — ${money(p.sell)}</option>`).join('')||'<option value="">No available phones</option>';
+ salesTable.innerHTML=data.sales.slice().reverse().map(s=>`<tr><td>${s.date}</td><td>${s.phone}</td><td>${s.customer}<br><small>${s.customerMobile||''}</small></td><td>${s.imei}</td><td>${money(s.amount)}</td><td>${s.payment}</td><td>${money(s.profit)}</td></tr>`).join('')||'<tr><td colspan="7">No sales yet.</td></tr>';
+}
+function deletePhone(id){if(confirm('Is phone ko stock se delete kare?')){data.phones=data.phones.filter(p=>p.id!==id);save()}}
+function backup(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download='mobiway-backup.json';a.click()}
+function changePin(){const old=prompt('Current PIN');if(old!==localStorage.getItem(PIN_KEY))return alert('Wrong PIN');const n=prompt('New PIN (4-6 digits)');if(n&&/^\\d{4,6}$/.test(n)){localStorage.setItem(PIN_KEY,n);alert('PIN changed.')}else alert('PIN must be 4-6 digits.')}
+function resetAll(){if(confirm('All data delete karna hai?')){data={phones:[],sales:[]};save()}}
+render();
+</script>
+</body></html>
